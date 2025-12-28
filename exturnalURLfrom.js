@@ -1,5 +1,5 @@
 /*
- * [[:Category:Benutzer:ⵓ/Scripts]]
+ * [[:Category:Benutzer:ⵓ/Scripts]] 
  */
 /**
  *
@@ -29,6 +29,7 @@
  * * Aufruf von autoDiff.js
  * * Unterstützung zur Entfernung von InternetArchiveBot-Meldungen
  */
+"use strict";
 ( function( $, mw ) {
 	if ( !document.forms.editform
 		|| ( mw.config.get( 'wgAction' ) !== 'edit' && mw.config.get( 'wgAction' ) !== 'submit' ) ) {
@@ -56,33 +57,33 @@
 	#linkCheckerBox td input { border:0px solid #000; margin:0; width:100%; height:100% }`);
 	const iconuri = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Oxygen480-categories-preferences-system-network.svg/22px-Oxygen480-categories-preferences-system-network.svg.png';
 	if ( mw.user.options.get( 'usebetatoolbar' ) ) {
-		mw.loader.using( 'ext.wikiEditor', function() {
-			$( document ).ready( function() {
-				$( '#wpTextbox1' ).wikiEditor( 'addToToolbar', {
-					'section': 'main',
-					'group': 'insert',
-					'tools': {
-						'externalURLform': {
-							'label': 'externalURL-form',
-							'type': 'button',
-							'icon': iconuri,
-							'action': {
-								'type': 'callback',
-								'execute': function() { return click(this); }
+		mw.loader.using( 'ext.wikiEditor', () => {
+				$(document).ready(function () {
+					$('#wpTextbox1').wikiEditor('addToToolbar', {
+						'section': 'main',
+						'group': 'insert',
+						'tools': {
+							'externalURLform': {
+								'label': 'externalURL-form',
+								'type': 'button',
+								'icon': iconuri,
+								'action': {
+									'type': 'callback',
+									'execute': function () { return click(this); }
+								}
 							}
 						}
-					}
-				} );
+					});
+				});
 			} );
-		} );
 	} else if ( mw.user.options.get( 'showtoolbar' ) ) {
-		mw.loader.using( 'mediawiki.action.edit', function() {
-			mw.toolbar.addButton( iconuri,
-									'externalURL-form', '', '', '', 'mw-customeditbutton-externalURLform' );
-			$( function() {
-				$( '#mw-customeditbutton-externalURLform' ).click( function() { return click( this ); } );
+		mw.loader.using( 'mediawiki.action.edit', () => {
+				mw.toolbar.addButton(iconuri,
+					'externalURL-form', '', '', '', 'mw-customeditbutton-externalURLform');
+				$(function () {
+					$('#mw-customeditbutton-externalURLform').click(function () { return click(this); });
+				});
 			} );
-		} );
 	} else {
 		$( document ).ready( function() {
 			/* Notfalls als Link unter dem Bearbeitungsfenster */
@@ -140,8 +141,15 @@
 				return false;}
 			textbox.focus();
 			if ( typeof textbox.selectionStart === 'number' ) {
+				const fullText = textbox.value;
+				const sellenght= this.getAttribute('data-uri').length	
 				textbox.selectionStart = tbindex;
-				textbox.selectionEnd = tbindex + this.getAttribute('data-uri').length;
+				textbox.selectionEnd = tbindex + sellenght;
+				textbox.value = fullText.substring(0, tbindex + sellenght);
+				textbox.scrollTop = textbox.scrollHeight;
+				textbox.value = fullText;
+				textbox.selectionStart = tbindex;
+				textbox.selectionEnd = tbindex + sellenght;				
 			} else if ( typeof textbox.selection === 'object' ) {
 				let range = textbox.selection.createRange();
 				range.move('character', tbindex);
@@ -153,31 +161,32 @@
 			if ( window.wikEd && window.wikEd.useWikEd ) {
 				wikEd.UpdateTextarea();
 			}
-			let t = textbox.value,
+			let texboxValNew = textbox.value,
 			count = 0;
 			for ( let i = urlList.length; i--; ) {
-				let p = -urlList[i][0].length;
-				for ( var n = urlList[i].number; n >= 0; n-- ) {
-					p = t.indexOf( urlList[i][0], p + urlList[i][0].length );
+				let position = -urlList[i][0].length;
+				for ( let n = urlList[i].number; n >= 0; n-- ) {
+					position = texboxValNew.indexOf( urlList[i][0], position + urlList[i][0].length );
 				}
-				if ( p < 0 ) {
+				if ( position < 0 ) {
 					continue;}
 				if ( !this.elements['r' + i] ) {
 					continue;}
-				var r = this.elements['r' + i].value.replace( /^\s+|\s+$/g, '' ) || urlList[i][0];
-				var text = this.elements['t' + i].value.replace( /^\s+|\s+$/g, '' );
-				var tree = createContextTree( t, p, p + urlList[i][0].length ), node = tree;
+				let returnUrl = this.elements['r' + i].value.replace( /^\s+|\s+$/g, '' ) || urlList[i][0];
+				const titletext = this.elements['t' + i].value.replace( /^\s+|\s+$/g, '' );
+				const tree = createContextTree( texboxValNew, position, position + urlList[i][0].length );
+				let node = tree;
 				if ( !tree ) {
 					continue;}
-				if ( tree.archive && r && r !== urlList[i][0] ) {
+				if ( tree.archive && returnUrl && returnUrl !== urlList[i][0] ) {
 					tree.archive = false;}
-				var archive = tree.archive || parseWebarchiv( r );
+				let archive = tree.archive || parseWebarchiv( returnUrl );
 				if ( /^W(?:aybackarchiv|BA)$/i.test( node.parent.type )
-					|| ( /^(?:Toter|Dead) Link$/i.test( node.parent.type ) && r !== urlList[i][0] ) ) {
+					|| ( /^(?:Toter|Dead) Link$/i.test( node.parent.type ) && returnUrl !== urlList[i][0] ) ) {
 					node = node.parent;
 				}
-				var de = node.parent.type === 'Internetquelle';
-				var isCite = de || /^(?:Internetquelle|Cite (?:book|journal|news|web)|BBKL)$/.test( node.parent.type );
+				const isIqu = node.parent.type === 'Internetquelle';
+				const isCite = isIqu || /^(?:Internetquelle|Cite (?:book|journal|news|web)|BBKL)$/.test( node.parent.type );
 				if ( isCite ) {
 					/* Drop misspelled parameters */
 					deleteParameter( node.parent.parameters, ['archivurl', 'archivdate', 'archivdatum', 'archivebot', 'archiv-bot',
@@ -189,61 +198,63 @@
 						node = node.parent;
 						/* deleteParameter( node.parameters, 'offline' );  */
 						putParameter( node.parameters, node.parameter || 'url', archive.url || urlList[i][0], 0 );
-						putParameter( node.parameters, de ? 'titel' : 'title', text, 1 );
-						var where = de ? ['url', 'titel', 'titelerg', 'werk', 'seiten', 'datum', 'archiv-url','abruf'] :
-						['url', 'title', 'accessdate', 'last', 'first', 'authorlink', 'coauthors',
-						'date', 'format', 'work', 'publisher', 'pages', 'language', 'archive-url','archiveurl'];
-						putParameter( node.parameters, de ? 'archiv-url' : 'archive-url', archive.archive || '', where );
-						putParameter( node.parameters, de ? 'archiv-datum' : 'archive-date', archive.date || '', where );
-						r = node.parameters.join( '' );
+						putParameter( node.parameters, isIqu ? 'titel' : 'title', titletext, 1 );
+						const where = isIqu ? ['url', 'titel', 'titelerg', 'werk', 'seiten', 'datum', 'archiv-url','abruf'] :
+							['url', 'title', 'accessdate', 'last', 'first', 'authorlink', 'coauthors',
+							'date', 'format', 'work', 'publisher', 'pages', 'language', 'archive-url','archiveurl'];
+						putParameter( node.parameters, isIqu ? 'archiv-url' : 'archive-url', archive.archive || '', where );
+						putParameter( node.parameters, isIqu ? 'archiv-datum' : 'archive-date', archive.date || '', where );
+						returnUrl = node.parameters.join( '' );
 					} else {
 						if ( node.parent.type === 'LINK' || node.parent.type === 'Webarchiv' ){
 							node = node.parent;}
 						//<nowiki>
-						r = '{{Webarchiv | url=' + ( archive.url || urlList[i][0] ) + ' | ' + ( archive.id
-						? 'webciteID=' + archive.id : archive.is
-						? 'archive-is=' + archive.is
-						: 'wayback=' + archive.timestamp ) + ' | text=' + text.replace( /\|+(?![^{}]*\}\})/g, '–' ) + '}}';
+						returnUrl = '{{Webarchiv | url=' + ( archive.url || urlList[i][0] ) + ' | ' + ( archive.id
+							? 'webciteID=' + archive.id : archive.is
+							? 'archive-is=' + archive.is
+							: 'wayback=' + archive.timestamp ) + ' | text=' + titletext.replace( /\|+(?![^{}]*\}\})/g, '–' ) + '}}';
 						//</nowiki>
 					}
 				} else if ( isCite ) {
 					node = node.parent;
 					deleteParameter( node.parameters, ['archiv-url', 'archiv-datum'] );
-					/* if ( r !== urlList[i][0] ) deleteParameter( node.parameters, 'offline' );   */
+					/* if ( returnUrl !== urlList[i][0] ) deleteParameter( node.parameters, 'offline' );   */
 					putParameter( node.parameters, node.parameter || 'url', r, 0 );
-					putParameter( node.parameters, de ? 'titel' : 'title', text, 1 );
-					r = node.parameters.join( '' );
+					putParameter( node.parameters, isIqu ? 'titel' : 'title', titletext, 1 );
+					returnUrl = node.parameters.join( '' );
 				} else if ( node.parent.type === 'LINK'
 					|| node.parent.type === 'Webarchiv'
-					|| ( text && ( !node.parent || node.parent.type === 'REF' ) ) ) {
-					r = '[' + r + (text ? ' ' + text : '') + ']';
+					|| ( titletext && ( !node.parent || node.parent.type === 'REF' ) ) ) {
+					returnUrl = '[' + returnUrl + (titletext ? ' ' + titletext : '') + ']';
 					if ( node.parent && node.parent.type !== 'REF' ) {
 						node = node.parent;}
 				}
-				if ( r === t.slice( node.start, node.end ) ) {
+				if ( returnUrl === texboxValNew.slice( node.start, node.end ) ) {
 					continue;}
-				t = t.slice( 0, node.start ) + r + t.slice( node.end );
+				texboxValNew = texboxValNew.slice( 0, node.start ) + returnUrl + texboxValNew.slice( node.end );
 					count++;
 			}
 			textbox.focus();
-			if ( t !== textbox.value ) {
-				var s = textbox.scrollTop, s0 = textbox.selectionStart, s1 = textbox.selectionEnd;
-				textbox.value = t;
-				textbox.selectionStart = s0, textbox.selectionEnd = s1, textbox.scrollTop = s;
-				s = summary.value,
-				s0 = s.length;
-				s = s.replace( /^\s+|\s+$/g, '' );
-				if ( /\d+\W*externer? Links?\s+geändert$/.test( s ) ) {
-					s = s.replace( /(\d)+\W*(?=externer? Links?\s+geändert$)/,
+			if ( texboxValNew !== textbox.value ) {
+				const s = textbox.scrollTop;
+				const s0 = textbox.selectionStart;
+				const s1 = textbox.selectionEnd;
+				textbox.value = texboxValNew;
+				textbox.selectionStart = s0, textbox.selectionEnd = s1, textbox.scrollTop = s ;
+				let summaryvalue  = summary.value;
+				const summarylen = summaryvalue.length;
+				summaryvalue = summaryvalue.replace( /^\s+|\s+$/g, '' );
+				if ( /\d+\W*externer? Links?\s+geändert$/.test( summaryvalue ) ) {
+					summaryvalue = summaryvalue.replace( /(\d)+\W*(?=externer? Links?\s+geändert$)/,
 						function( $0, $1 ) { return Math.max( $1, count ) + '+ '; } );
 				} else {
-					if ( /[^!,./:;?]$/.test( s ) ){
-						s += ';';}
-					if ( /\S$/.test( s ) ) {
-						s += ' ';}
-					s += count + ' externe' + ( count > 1 ? ' Links' : 'r Link' ) + ' geändert';
+					if ( /[^!,./:;?]$/.test( summaryvalue ) ){
+						summaryvalue += ';';}
+					if ( /\S$/.test( summaryvalue ) ) {
+						summaryvalue += ' ';}
+					summaryvalue += count + ' externe' + ( count > 1 ? ' Links' : 'r Link' ) + ' geändert';
 				}
-				summary.value = s, summary.selectionStart = s0, summary.selectionEnd = s.length;
+				summary.value = summaryvalue, summary.selectionStart = summarylen, summary.selectionEnd = summaryvalue.length;
 				mw.hook( 'AutoFormatterDoneWithChange' ).fire();
 			}
 			$( '#linkCheckerBox' ).remove();
@@ -275,7 +286,7 @@
 			return false;
 		} );
 	}
-	function  HTMLrow ( textboxValue , uriArray, i , myoptions ) {
+	function  buildHTMLrow ( textboxValue , uriArray, i , myoptions ) {
 		let tree = createContextTree(textboxValue, uriArray[i].index, uriArray[i].index + uriArray[i][0].length);
 		if ( !tree ) {
 			return ''}
@@ -319,9 +330,8 @@
 		const euquerylink = `&nbsp;<a class="exturlusage"
 			href="/wiki/Special:LinkSearch/${euquery}" target="_blank"
 			title="Weblinksuche innerhalb der Wikipedia"><span
-			style="display:none">${sortRecherche}</span>LS</a></td>
-			<td><input name="r${i}" type="url" autocomplete="off" value="`;
-		const linktitle = `"></td><td
+			style="display:none">${sortRecherche}</span>LS</a>`;
+		const linktitle = `<td
 			data-sort-value="${ mw.html.escape( linktext.replace( /^[^\w\xC0-\u1FFF]+/, '' ) )}">
 			<input name="t${i}" type="text"
 			value="${ mw.html.escape( linktext.replace( /[\n\r\t ]+/g, ' ' ) ) }"></td></tr>`
@@ -337,14 +347,15 @@
 			<a href="https://wayback.archive.org/web/${timestamp || '*' }/${myuri}"
 			target="_blank"
 			title="Wayback Machine beim Internet Archive (archive.org)">IA</a>&nbsp;
-			${archivelinks}${euquerylink}${texturi}${linktitle}`
-		euqueryresult(euquery, uriArray , myoptions)
+			${archivelinks}${euquerylink}</td>
+			<td><input name="r${i}" type="url" autocomplete="off" value="${texturi}"></td>${linktitle}`
+		euqueryresult(euquery, uriArray, i , myoptions)
 		return htmlZeileurltabelle
 	}
 function htmlTable(textboxValue , uriArray,  myoptions ){
 		let htmlZeilen=[]
 		for ( let i = 0; i < uriArray.length; i++ ) {
-			htmlZeilen.push(HTMLrow ( textboxValue , uriArray , i , myoptions ) )
+			htmlZeilen.push( buildHTMLrow ( textboxValue , uriArray , i , myoptions ) )
 		}
 		const htmlKopfurltabelle = `
 			<div id="linkCheckerBox" style="padding:1em 0"><form action="#">
@@ -442,7 +453,7 @@ function htmlTable(textboxValue , uriArray,  myoptions ){
 		}
 		return  htmldirs;
 	}
-	function euqueryresult (euquery, uriArray , myoptions) {
+	function euqueryresult (euquery, uriArray, i , myoptions) {
 	if ( euquery && uriArray.length <= myoptions.autoLimit ) {
 		( function( i ) {
 			$.ajax( '//de.wikipedia.org/w/api.php?action=query&format=xml&list=exturlusage&euprop=&euquery=' + euquery, {
