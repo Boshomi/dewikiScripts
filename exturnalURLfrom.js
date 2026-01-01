@@ -186,39 +186,39 @@
 				const isBBKL = node.parent.type === 'BBKL';
 				const isEnCite =  /^Cite (?:book|journal|news|web|map|video|conference)$/.test(node.parent.type);
 				const isZQtemplate = isIqu || /^(?:Internetquelle|Cite (?:book|journal|news|web|map|video|conference)|BBKL)$/.test(node.parent.type);
-				if (isZQtemplate) {
+				if (archive && isZQtemplate ) {
+					node = node.parent;
 					/* Drop misspelled parameters */
-					deleteParameter(node.parent.parameters, ['archivurl', 'archivdate', 'archivdatum', 'archivebot', 'archiv-bot',
-						'archive-datum', 'archvieurl', 'archviedate', 
-						'web-archiv', 'webarchiv', 'https?:\\/\\/[^=|]*'
-					]);
-				}
-				if (archive) {
-					if (isZQtemplate) {
-						node = node.parent;
-						/* deleteParameter( node.parameters, 'offline' );  */
-						putParameter(node.parameters, node.parameter || 'url', archive.url || urlList[i][0], 0);
-						putParameter(node.parameters, isIqu ? 'titel' : 'title', titletext, 1);
-						const where = isIqu ? ['url', 'titel', 'titelerg', 'werk', 'seiten', 'datum', 'archiv-url', 'abruf'] : 
-						['url', 'title', 'accessdate', 'last', 'first', 'authorlink', 'coauthors', 'date', 'format', 'work', 'publisher', 'pages', 'language', 'archive-url','archiveurl','archivedate','archive-date'];
-						putParameter(node.parameters, isIqu ? 'archiv-url' : 'archive-url', archive.archive || '', where);
-						putParameter(node.parameters, isIqu ? 'archiv-datum' : 'archive-date', archive.date || '', where);
-						deleteParameter(node.parameters, ['archiveurl', 'archivedate']);
-						returnUrl = node.parameters.join('');
-					} else {
-						if (node.parent.type === 'LINK' || node.parent.type === 'Webarchiv') {
-							node = node.parent;
-						}
-						//<nowiki>
-						returnUrl = '{{Webarchiv | url=' + (archive.url || urlList[i][0]) + ' | ' + (archive.id ?
-							'webciteID=' + archive.id : archive.is ?
-							'archive-is=' + archive.is :
-							'wayback=' + archive.timestamp) + ' | text=' + titletext.replace(/\|+(?![^{}]*\}\})/g, '–') + '}}';
-						//</nowiki>
-					}
+					deleteParameter(node.parameters, ['archivurl', 'archivdate', 'archivdatum', 'archivebot', 'archiv-bot',
+						'archive-datum', 'archvieurl', 'archviedate', 'web-archiv', 'webarchiv', 'https?:\\/\\/[^=|]*']);
+					putParameter(node.parameters, node.parameter || 'url', archive.url || urlList[i][0], 0);
+					putParameter(node.parameters, isIqu ? 'titel' : 'title', titletext, 1);
+					const where = isIqu ? ['url', 'titel', 'titelerg', 'werk', 'seiten', 'datum', 'archiv-url', 'abruf'] : 
+					['url', 'title', 'accessdate', 'last', 'first', 'authorlink', 'coauthors', 'date', 'format', 'work', 'publisher', 'pages', 'language', 'archive-url','archiveurl','archivedate','archive-date'];
+					putParameter(node.parameters, isIqu ? 'archiv-url' : 'archive-url', archive.archive || '', where);
+					putParameter(node.parameters, isIqu ? 'archiv-datum' : 'archive-date', archive.date || '', where);
+					deleteParameter(node.parameters, ['archiveurl', 'archivedate']);
+					returnUrl = node.parameters.join('');
+				} else if (archive && isWebarchive)  {
+					node = node.parent;
+					returnUrl = '{{Webarchiv | url=' + (archive.url || urlList[i][0]) + ' | ' + (archive.id ?
+					'webciteID=' + archive.id : archive.is ?
+					'archive-is=' + archive.is :
+					'wayback=' + archive.timestamp) + ' | text=' + titletext.replace(/\|+(?![^{}]*\}\})/g, '–') + '}}';
+					//</nowiki>
+				} else if (archive && !(isWebarchive|| isZQtemplate ) ) {
+					//<nowiki>
+					returnUrl = '{{Webarchiv | url=' + (archive.url || urlList[i][0]) + ' | ' + (archive.id ?
+						'webciteID=' + archive.id : archive.is ?
+						'archive-is=' + archive.is :
+						'wayback=' + archive.timestamp) + ' | text=' + titletext.replace(/\|+(?![^{}]*\}\})/g, '–') + '}}';
+					//</nowiki>
 				} else if (isZQtemplate) {
 					node = node.parent;
-					deleteParameter(node.parameters, ['archiv-url', 'archiv-datum']);
+					/* Drop misspelled parameters and unwanted archive-parameters */
+					deleteParameter(node.parameters, ['archiv-url', 'archiv-datum','archive-url', 'archive-date','archiveurl', 'archivedate',
+						'archivurl', 'archivdate', 'archivdatum', 'archivebot', 'archiv-bot',
+						'archive-datum', 'archvieurl', 'archviedate', 'web-archiv', 'webarchiv', 'https?:\\/\\/[^=|]*']);
 					/* if ( returnUrl !== urlList[i][0] ) deleteParameter( node.parameters, 'offline' );   */
 					putParameter(node.parameters, node.parameter || 'url', returnUrl, 0);
 					putParameter(node.parameters, isIqu ? 'titel' : 'title', titletext, 1);
